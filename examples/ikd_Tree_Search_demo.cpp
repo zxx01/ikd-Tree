@@ -17,6 +17,13 @@ using PointType = pcl::PointXYZ;
 using PointVector = KD_TREE<PointType>::PointVector;
 template class KD_TREE<pcl::PointXYZ>;
 
+/**
+ * @brief 给输入的点云数据 pc 添加颜色信息并将结果保存到 pc_colored 中。
+ *
+ * @param pc            输入点云
+ * @param pc_colored    输出点云
+ * @param color         颜色
+ */
 void colorize(const PointVector &pc, pcl::PointCloud<pcl::PointXYZRGB> &pc_colored, const std::vector<int> &color)
 {
     int N = pc.size();
@@ -37,6 +44,13 @@ void colorize(const PointVector &pc, pcl::PointCloud<pcl::PointXYZRGB> &pc_color
     }
 }
 
+/**
+ * @brief   根据提供的中心点和盒子各维度的长度，计算并设置盒子的最小和最大顶点坐标，从而生成一个描述盒子的数据结构
+ *
+ * @param boxpoint      盒子上下界
+ * @param center_pt     中心点坐标
+ * @param box_lengths   盒子的半边长
+ */
 void generate_box(BoxPointType &boxpoint, const PointType &center_pt, vector<float> box_lengths)
 {
     float &x_dist = box_lengths[0];
@@ -51,6 +65,13 @@ void generate_box(BoxPointType &boxpoint, const PointType &center_pt, vector<flo
     boxpoint.vertex_max[2] = center_pt.z + z_dist;
 }
 
+/**
+ * @brief 计算两点连线长度的平方
+ *
+ * @param a 点1
+ * @param b 点2
+ * @return float
+ */
 float test_dist(PointType a, PointType b)
 {
     float dist = 0.0f;

@@ -79,13 +79,13 @@ public:
     using Ptr = shared_ptr<KD_TREE<PointType>>;
     struct KD_TREE_NODE
     {
-        PointType point;
-        uint8_t division_axis;
-        int TreeSize = 1;
-        int invalid_point_num = 0;
+        PointType point;           // 数据点
+        uint8_t division_axis;     // 分割轴
+        int TreeSize = 1;          // 总节点数
+        int invalid_point_num = 0; // label 为删除的点的数量
         int down_del_num = 0;
-        bool point_deleted = false;
-        bool tree_deleted = false;
+        bool point_deleted = false; // 当前节点是否标记为删除
+        bool tree_deleted = false;  // 整个(子)树是否标记为删除
         bool point_downsample_deleted = false;
         bool tree_downsample_deleted = false;
         bool need_push_down_to_left = false;
@@ -93,10 +93,10 @@ public:
         bool working_flag = false;
         float radius_sq;
         pthread_mutex_t push_down_mutex_lock;
-        float node_range_x[2], node_range_y[2], node_range_z[2];
-        KD_TREE_NODE *left_son_ptr = nullptr;
-        KD_TREE_NODE *right_son_ptr = nullptr;
-        KD_TREE_NODE *father_ptr = nullptr;
+        float node_range_x[2], node_range_y[2], node_range_z[2]; // tree 对应的包络Boxs
+        KD_TREE_NODE *left_son_ptr = nullptr;                    // 左子树
+        KD_TREE_NODE *right_son_ptr = nullptr;                   // 右子树
+        KD_TREE_NODE *father_ptr = nullptr;                      // 父子树
         // For paper data record
         float alpha_del;
         float alpha_bal;
@@ -110,6 +110,10 @@ public:
         operation_set op;
     };
 
+    /**
+     * @brief 堆节点的类型
+     *
+     */
     struct PointType_CMP
     {
         PointType point;
@@ -128,9 +132,18 @@ public:
         }
     };
 
+    /**
+     * @brief 大根堆
+     *
+     */
     class MANUAL_HEAP
     {
     public:
+        /**
+         * @brief 初始化一个大根堆
+         *
+         * @param max_capacity  设定堆的最大容量
+         */
         MANUAL_HEAP(int max_capacity = 100)
         {
             cap = max_capacity;
@@ -138,8 +151,16 @@ public:
             heap_size = 0;
         }
 
+        /**
+         * @brief 释放兑数组的内存
+         *
+         */
         ~MANUAL_HEAP() { delete[] heap; }
 
+        /**
+         * @brief 从大根堆中弹出（删除）堆顶元素
+         *
+         */
         void pop()
         {
             if (heap_size == 0)
@@ -150,8 +171,18 @@ public:
             return;
         }
 
+        /**
+         * @brief 获取大根堆的最大值
+         *
+         * @return PointType_CMP
+         */
         PointType_CMP top() { return heap[0]; }
 
+        /**
+         * @brief 向大根堆中插入新元素，如果堆已满，无法添加新元素
+         *
+         * @param point
+         */
         void push(PointType_CMP point)
         {
             if (heap_size >= cap)
@@ -162,27 +193,47 @@ public:
             return;
         }
 
+        /**
+         * @brief 获取当前堆中的节点数目
+         *
+         * @return int
+         */
         int size() { return heap_size; }
 
+        /**
+         * @brief 清除整个堆
+         *
+         */
         void clear() { heap_size = 0; }
 
     private:
-        int heap_size = 0;
-        int cap = 0;
-        PointType_CMP *heap;
+        int heap_size = 0;   // 堆中当前元素的数量
+        int cap = 0;         // 堆的最大容量
+        PointType_CMP *heap; // 用于存储堆元素的数组
+
+        /**
+         * @brief 大根堆中的节点下沉操作
+         *
+         * @param heap_index  要下沉的堆节点index
+         */
         void MoveDown(int heap_index)
         {
-            int l = heap_index * 2 + 1;
-            PointType_CMP tmp = heap[heap_index];
+            int l = heap_index * 2 + 1;           // 计算左子节点的索引
+            PointType_CMP tmp = heap[heap_index]; // 保存当前节点的值
+
+            // 不断调整堆的结构
             while (l < heap_size)
             {
+                // 检查是否存在右子节点，并且右子节点的值大于左子节点，如果右子节点更大，则选择右子节点
                 if (l + 1 < heap_size && heap[l] < heap[l + 1])
                     l++;
+
+                // 比较当前节点的值和选定的子节点的值，如果当前节点的值小于子节点的值
                 if (tmp < heap[l])
                 {
-                    heap[heap_index] = heap[l];
-                    heap_index = l;
-                    l = heap_index * 2 + 1;
+                    heap[heap_index] = heap[l]; // 将子节点上移，覆盖当前节点
+                    heap_index = l;             // 更新当前节点索引
+                    l = heap_index * 2 + 1;     // 计算左子节点索引
                 }
                 else
                     break;
@@ -191,22 +242,30 @@ public:
             return;
         }
 
+        /**
+         * @brief 大根堆中的节点上浮操作
+         *
+         * @param heap_index 要上浮的堆节点index
+         */
         void FloatUp(int heap_index)
         {
-            int ancestor = (heap_index - 1) / 2;
-            PointType_CMP tmp = heap[heap_index];
+            int ancestor = (heap_index - 1) / 2;  // 计算父节点的索引
+            PointType_CMP tmp = heap[heap_index]; // 保存当前节点的值
+
+            // 不断调整大根堆的结构
             while (heap_index > 0)
             {
+                // 比较当前节点的值和父节点的值，如果父节点的值小于当前节点的值
                 if (heap[ancestor] < tmp)
                 {
-                    heap[heap_index] = heap[ancestor];
-                    heap_index = ancestor;
-                    ancestor = (heap_index - 1) / 2;
+                    heap[heap_index] = heap[ancestor]; // 将父节点下移，覆盖当前节点
+                    heap_index = ancestor;             // 更新当前节点索引
+                    ancestor = (heap_index - 1) / 2;   // 计算新的父节点索引
                 }
                 else
                     break;
             }
-            heap[heap_index] = tmp;
+            heap[heap_index] = tmp; // 将当前节点放置在最终位置上
             return;
         }
     };
@@ -231,9 +290,9 @@ private:
     // KD Tree Functions and augmented variables
     int Treesize_tmp = 0, Validnum_tmp = 0;
     float alpha_bal_tmp = 0.5, alpha_del_tmp = 0.0;
-    float delete_criterion_param = 0.5f;
-    float balance_criterion_param = 0.7f;
-    float downsample_size = 0.2f;
+    float delete_criterion_param = 0.5f;  // 删除剪枝
+    float balance_criterion_param = 0.7f; // 平衡剪枝
+    float downsample_size = 0.2f;         // 下采样分辨率
     bool Delete_Storage_Disabled = false;
     KD_TREE_NODE *STATIC_ROOT_NODE = nullptr;
     PointVector Points_deleted;

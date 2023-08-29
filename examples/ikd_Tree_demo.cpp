@@ -42,6 +42,13 @@ PointVector removed_points;
 
 KD_TREE<ikdTree_PointType> ikd_Tree(0.3, 0.6, 0.2);
 
+/**
+ * @brief 生成(x_min, x_max)之间的随机数
+ *
+ * @param x_min
+ * @param x_max
+ * @return float
+ */
 float rand_float(float x_min, float x_max)
 {
     float rand_ratio = rand() / (float)RAND_MAX;
@@ -51,7 +58,6 @@ float rand_float(float x_min, float x_max)
 /*
    Generate the points to initialize an incremental k-d tree
 */
-
 void generate_initial_point_cloud(int num)
 {
     PointVector().swap(point_cloud);
@@ -69,7 +75,6 @@ void generate_initial_point_cloud(int num)
 /*
     Generate random new points for point-wise insertion to the incremental k-d tree
 */
-
 void generate_increment_point_cloud(int num)
 {
     PointVector().swap(cloud_increment);
@@ -88,7 +93,6 @@ void generate_increment_point_cloud(int num)
 /*
     Generate random points for point-wise delete on the incremental k-d tree
 */
-
 void generate_decrement_point_cloud(int num)
 {
     PointVector().swap(cloud_decrement);
@@ -105,7 +109,6 @@ void generate_decrement_point_cloud(int num)
 /*
     Generate random boxes for box-wise re-insertion on the incremental k-d tree
 */
-
 void generate_box_increment(vector<BoxPointType> &Add_Boxes, float box_length, int box_num)
 {
     vector<BoxPointType>().swap(Add_Boxes);
@@ -131,7 +134,9 @@ void generate_box_increment(vector<BoxPointType> &Add_Boxes, float box_length, i
             PointType tmp = cloud_deleted[cloud_deleted.size() - 1];
             cloud_deleted.pop_back();
 
-            if (tmp.x + EPSS < boxpoint.vertex_min[0] || tmp.x - EPSS > boxpoint.vertex_max[0] || tmp.y + EPSS < boxpoint.vertex_min[1] || tmp.y - EPSS > boxpoint.vertex_max[1] || tmp.z + EPSS < boxpoint.vertex_min[2] || tmp.z - EPSS > boxpoint.vertex_max[2])
+            if (tmp.x + EPSS < boxpoint.vertex_min[0] || tmp.x - EPSS > boxpoint.vertex_max[0] ||
+                tmp.y + EPSS < boxpoint.vertex_min[1] || tmp.y - EPSS > boxpoint.vertex_max[1] ||
+                tmp.z + EPSS < boxpoint.vertex_min[2] || tmp.z - EPSS > boxpoint.vertex_max[2])
             {
                 cloud_deleted.insert(cloud_deleted.begin(), tmp);
             }
@@ -147,7 +152,6 @@ void generate_box_increment(vector<BoxPointType> &Add_Boxes, float box_length, i
 /*
     Generate random boxes for box-wise delete on the incremental k-d tree
 */
-
 void generate_box_decrement(vector<BoxPointType> &Delete_Boxes, float box_length, int box_num)
 {
     vector<BoxPointType>().swap(Delete_Boxes);
@@ -156,6 +160,7 @@ void generate_box_decrement(vector<BoxPointType> &Delete_Boxes, float box_length
     BoxPointType boxpoint;
     for (int k = 0; k < box_num; k++)
     {
+        // 生成待删除的随机的盒子坐标和尺寸，将随机生成的盒子信息添加到 Delete_Boxes 向量中
         x_p = rand_float(X_MIN, X_MAX);
         y_p = rand_float(Y_MIN, Y_MAX);
         z_p = rand_float(Z_MIN, Z_MAX);
@@ -166,13 +171,17 @@ void generate_box_decrement(vector<BoxPointType> &Delete_Boxes, float box_length
         boxpoint.vertex_min[2] = z_p - d;
         boxpoint.vertex_max[2] = z_p + d;
         Delete_Boxes.push_back(boxpoint);
-        int n = point_cloud.size();
+        int n = point_cloud.size(); // 目前point_cloud中保留的点的数量
         int counter = 0;
+
+        // 遍历每一个现存的点，将在盒子范围内的点从 point_cloud 中删除，并添加到 cloud_deleted 向量中
         while (counter < n)
         {
             PointType tmp = point_cloud[point_cloud.size() - 1];
             point_cloud.pop_back();
-            if (tmp.x + EPSS < boxpoint.vertex_min[0] || tmp.x - EPSS > boxpoint.vertex_max[0] || tmp.y + EPSS < boxpoint.vertex_min[1] || tmp.y - EPSS > boxpoint.vertex_max[1] || tmp.z + EPSS < boxpoint.vertex_min[2] || tmp.z - EPSS > boxpoint.vertex_max[2])
+            if (tmp.x + EPSS < boxpoint.vertex_min[0] || tmp.x - EPSS > boxpoint.vertex_max[0] ||
+                tmp.y + EPSS < boxpoint.vertex_min[1] || tmp.y - EPSS > boxpoint.vertex_max[1] ||
+                tmp.z + EPSS < boxpoint.vertex_min[2] || tmp.z - EPSS > boxpoint.vertex_max[2])
             {
                 point_cloud.insert(point_cloud.begin(), tmp);
             }
@@ -188,12 +197,10 @@ void generate_box_decrement(vector<BoxPointType> &Delete_Boxes, float box_length
 /*
     Generate target point for nearest search on the incremental k-d tree
 */
-
 PointType generate_target_point()
 {
     PointType point;
     point.x = rand_float(X_MIN, X_MAX);
-    ;
     point.y = rand_float(Y_MIN, Y_MAX);
     point.z = rand_float(Z_MIN, Z_MAX);
     return point;
